@@ -1,0 +1,19 @@
+{
+  "name": "activelamp-twilio",
+  "version": "0.0.0",
+  "description": "Responds to sms messages sent to ActiveLAMP phone numbers",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.14.1",
+    "express": "^4.13.3",
+    "jade": "^1.11.0",
+    "node-slack": "0.0.7",
+    "twilio": "^2.5.1"
+  }
+}
