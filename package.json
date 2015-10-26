@@ -11,9 +11,11 @@
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.14.1",
+    "deferred": "^0.7.3",
     "express": "^4.13.3",
     "jade": "^1.11.0",
     "node-slack": "0.0.7",
-    "twilio": "^2.5.1"
+    "twilio": "^2.5.1",
+    "basecrm": "activelamp/basecrm"
   }
 }

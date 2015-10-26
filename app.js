@@ -2,7 +2,9 @@ var path = require('path'),
     express = require('express'),
     bodyParser = require('body-parser'),
     twilio = require('twilio'),
-    Slack = require('node-slack')
+    Slack = require('node-slack'),
+    BaseCRM = require('basecrm'),
+    deferred = require('deferred');
     
 // Load configuration information from system environment variables.
 var TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID,
@@ -18,6 +20,9 @@ var SLACK_URL = process.env.SLACK_INCOMING_WEBHOOK,
     SLACK_CHANNEL = process.env.SLACK_CHANNEL;
 
 var slack = new Slack(SLACK_URL);
+
+var BASECRM_TOKEN = process.env.BASECRM_TOKEN;
+var baseCRM = new BaseCRM(BASECRM_TOKEN);
 
 // Create an Express app.
 var app = express();
@@ -35,11 +40,18 @@ app.get('/', function(request, response) {
 });
 
 app.post('/', function(request, response) {
-  slack.send({
-      text: request.body.Body,
-      channel: SLACK_CHANNEL,
-      username: 'Incoming ' + request.body.From
+  // Get the data from the Promise.
+  baseCRM.findByPhone(request.body.From.substr(2), 'contacts')(function(value) {
+    var res = JSON.parse(value.body);
+    var name = res.items[0].data.name ? res.items[0].data.name : '';
+    
+    slack.send({
+        text: request.body.Body,
+        channel: SLACK_CHANNEL,
+        username: 'Incoming: ' + name + ' ' + request.body.From
+    });
   });
+  
   // Send an empty reponse back to Twilio
   var twiml = new twilio.TwimlResponse();
   response.writeHead(200, {'Content-Type': 'text/xml'});
@@ -56,10 +68,17 @@ app.post('/message', function(request, response) {
         body: request.body.text.substring(13)
       }, function(err, data) {
         response.send('Message sent!');
-        slack.send({
-            text: request.body.text.substring(13),
-            channel: SLACK_CHANNEL,
-            username: 'Outgoing ' + phone + ' by ' + request.body.user_name
+        
+        // Get the data from the Promise.
+        baseCRM.findByPhone(phone.substr(2), 'contacts')(function(value) {
+          var res = JSON.parse(value.body);
+          var name = res.items[0].data.name ? res.items[0].data.name : '';
+          
+          slack.send({
+              text: request.body.text.substring(13),
+              channel: SLACK_CHANNEL,
+              username: 'Outgoing ' + name + " " + phone + ' by ' + request.body.user_name
+          });
         });
       });
     }
