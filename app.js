@@ -43,7 +43,7 @@ app.post('/', function(request, response) {
   // Get the data from the Promise.
   baseCRM.findByPhone(request.body.From.substr(2), 'contacts')(function(value) {
     var res = JSON.parse(value.body);
-    var name = res.items[0].data.name ? res.items[0].data.name : '';
+    var name = res.items.length > 0 ? res.items[0].data.name : '';
     
     slack.send({
         text: request.body.Body,
@@ -72,7 +72,7 @@ app.post('/message', function(request, response) {
         // Get the data from the Promise.
         baseCRM.findByPhone(phone.substr(2), 'contacts')(function(value) {
           var res = JSON.parse(value.body);
-          var name = res.items[0].data.name ? res.items[0].data.name : '';
+          var name = res.items.length > 0 ? res.items[0].data.name : '';
           
           slack.send({
               text: request.body.text.substring(13),
