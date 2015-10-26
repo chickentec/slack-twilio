@@ -9,7 +9,9 @@ var path = require('path'),
 // Load configuration information from system environment variables.
 var TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN,
-    TWILIO_NUMBER = process.env.TWILIO_NUMBER;
+    TWILIO_NUMBER = process.env.TWILIO_NUMBER,
+    TWILIO_NUMBER_SPECIAL = process.env.TWILIO_NUMBER_SPECIAL,
+    TWILIO_SPECIAL_NUMBER_TAG = process.env.TWILIO_SPECIAL_NUMBER_TAG;
 
 // Create an authenticated client to access the Twilio REST API
 var client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
@@ -42,9 +44,9 @@ app.get('/', function(request, response) {
 app.post('/', function(request, response) {
   // Get the data from the Promise.
   baseCRM.findByPhone(request.body.From.substr(2), 'contacts')(function(value) {
-    var res = JSON.parse(value.body);
-    var name = res.items.length > 0 ? res.items[0].data.name : '';
-    
+    var res = typeof value.body == 'string' ? JSON.parse(value.body) : value.body;
+    var name = res.items.length > 0 ? res.items[0].data.first_name + " " + res.items[0].data.last_name : '';
+
     slack.send({
         text: request.body.Body,
         channel: SLACK_CHANNEL,
@@ -62,23 +64,24 @@ app.post('/message', function(request, response) {
   if (request.body.token == SLACK_TOKEN) {
     var phone = request.body.text.substring(0,12);
     if (phone.match(/\+1[0-9]{10}/)) {
-      client.sendSms({
-        to: phone,
-        from: TWILIO_NUMBER,
-        body: request.body.text.substring(13)
-      }, function(err, data) {
-        response.send('Message sent!');
-        
-        // Get the data from the Promise.
-        baseCRM.findByPhone(phone.substr(2), 'contacts')(function(value) {
-          var res = JSON.parse(value.body);
-          var name = res.items.length > 0 ? res.items[0].data.name : '';
-          
-          slack.send({
-              text: request.body.text.substring(13),
-              channel: SLACK_CHANNEL,
-              username: 'Outgoing ' + name + " " + phone + ' by ' + request.body.user_name
-          });
+      // Get the data from the Promise.
+      baseCRM.findByPhone(phone.substr(2), 'contacts')(function(value) {
+        var res = typeof value.body == 'string' ? JSON.parse(value.body) : value.body;
+        var name = res.items.length > 0 ? res.items[0].data.first_name + " " + res.items[0].data.last_name : '';
+        var tags = res.items.length > 0 ? res.items[0].data.tags : [];
+
+        slack.send({
+            text: request.body.text.substring(13),
+            channel: SLACK_CHANNEL,
+            username: 'Outgoing ' + name + " " + phone + ' by ' + request.body.user_name
+        });
+        var from = tags.indexOf(TWILIO_SPECIAL_NUMBER_TAG) >= 0 ? TWILIO_NUMBER_SPECIAL : TWILIO_NUMBER;
+        client.sendSms({
+          to: phone,
+          from: from,
+          body: request.body.text.substring(13)
+        }, function(err, data) {
+          response.send('Message sent!');
         });
       });
     }
