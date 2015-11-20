@@ -67,15 +67,22 @@ app.post('/message', function(request, response) {
       // Get the data from the Promise.
       baseCRM.findByPhone(phone.substr(2), 'contacts')(function(value) {
         var res = typeof value.body == 'string' ? JSON.parse(value.body) : value.body;
-        var name = res.items.length > 0 ? res.items[0].data.first_name + " " + res.items[0].data.last_name : '';
-        var tags = res.items.length > 0 ? res.items[0].data.tags : [];
-
+        return {
+          name: res.items[0].data.first_name + " " + res.items[0].data.last_name,
+          tags: res.items[0].data.tags
+        };
+      }, function() {
+        return {
+          name: '',
+          tags: []
+        };
+      }).then(function(data) {
         slack.send({
             text: request.body.text.substring(13),
             channel: SLACK_CHANNEL,
-            username: 'Outgoing ' + name + " " + phone + ' by ' + request.body.user_name
+            username: 'Outgoing ' + data.name + " " + phone + ' by ' + request.body.user_name
         });
-        var from = tags.indexOf(TWILIO_SPECIAL_NUMBER_TAG) >= 0 ? TWILIO_NUMBER_SPECIAL : TWILIO_NUMBER;
+        var from = data.tags.indexOf(TWILIO_SPECIAL_NUMBER_TAG) >= 0 ? TWILIO_NUMBER_SPECIAL : TWILIO_NUMBER;
         client.sendSms({
           to: phone,
           from: from,
