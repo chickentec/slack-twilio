@@ -45,12 +45,18 @@ app.post('/', function(request, response) {
   // Get the data from the Promise.
   baseCRM.findByPhone(request.body.From.substr(2), 'contacts')(function(value) {
     var res = typeof value.body == 'string' ? JSON.parse(value.body) : value.body;
-    var name = res.items.length > 0 ? res.items[0].data.first_name + " " + res.items[0].data.last_name : '';
-
+    return {
+      name: res.items.length > 0 ? res.items[0].data.first_name + " " + res.items[0].data.last_name : ''
+    }
+  }, function() {
+    return {
+      name: ''
+    }
+  }).then(function(data) {
     slack.send({
         text: request.body.Body,
         channel: SLACK_CHANNEL,
-        username: 'Incoming: ' + name + ' ' + request.body.From
+        username: 'Incoming: ' + data.name + ' ' + request.body.From
     });
   });
   
